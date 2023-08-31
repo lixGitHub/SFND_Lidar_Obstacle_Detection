@@ -150,3 +150,20 @@ If you get build errors related to Qt5, make sure that the path for Qt5 is corre
 [PCL Source Github](https://github.com/PointCloudLibrary/pcl)
 
 [PCL Mac Compilation Docs](https://pcl.readthedocs.io/projects/tutorials/en/latest/compiling_pcl_macosx.html#compiling-pcl-macosx)
+
+
+
+### Compile and Run on ubuntu20.04
+
+1.  `sudo apt install libpcl-dev` does not work, because it install libpcl 1.10 on ubuntu 20.04.
+2.  I installed pcl 1.13.0. (https://pcl.readthedocs.io/projects/tutorials/en/master/compiling_pcl_posix.html)
+3.  during cmake pcl, has error: `No package 'libusb-1.0' found`.
+4.  use `sudo apt install libusb-1.0-0-dev` and solved the error in 3. `sudo apt-get install libusb-1.0-0` cannot solve.
+5.  During make pcl, has error: "fatal error: XnOS.h: No such file or directory 47 | #include <XnOS.h>"
+6.  install `sudo apt-get install libopenni-dev`  (https://programmer.group/solving-openni-problem-xnos.h-no-such-file-or-directory.html) to solve error in 5.
+7.  after install pcl. continue to compile code.
+8.  has the error (https://github.com/mrpt-ros-pkg/mrpt_slam/issues/28)
+9.  modified CMakeLists.txt according to README.me `add_definitions(-std=c++14)` `find_package(PCL 1.11 REQUIRED)`
+10. has error `error: ‘filesystem’ is not a member of ‘boost’`
+11. add #include <boost/filesystem.hpp> in processPointClouds.cpp
+12. success compile and run.
