@@ -167,3 +167,21 @@ If you get build errors related to Qt5, make sure that the path for Qt5 is corre
 10. has error `error: ‘filesystem’ is not a member of ‘boost’`
 11. add #include <boost/filesystem.hpp> in processPointClouds.cpp
 12. success compile and run.
+
+# 2nd time.
+got error:
+
+CMake Warning at /usr/local/share/pcl-1.13/PCLConfig.cmake:267 (find_package):
+  By not providing "FindVTK.cmake" in CMAKE_MODULE_PATH this project has
+  asked CMake to find a package configuration file provided by "VTK", but
+  CMake did not find one.
+
+  Could not find a package configuration file provided by "VTK" with any of
+  the following names:
+
+    VTKConfig.cmake
+    vtk-config.cmake
+
+# solution:
+`sudo apt-get purge libvtk7-dev libvtk7-qt-dev`
+`sudo apt-get install libvtk7-dev libvtk7-qt-dev`
