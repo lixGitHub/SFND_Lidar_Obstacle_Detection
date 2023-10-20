@@ -153,7 +153,9 @@ If you get build errors related to Qt5, make sure that the path for Qt5 is corre
 
 
 
-### Compile and Run on ubuntu20.04
+### Compile and Run on ubuntu 20.04
+
+#### 1st time set up
 
 1.  `sudo apt install libpcl-dev` does not work, because it install libpcl 1.10 on ubuntu 20.04.
 2.  I installed pcl 1.13.0. (https://pcl.readthedocs.io/projects/tutorials/en/master/compiling_pcl_posix.html)
@@ -168,8 +170,9 @@ If you get build errors related to Qt5, make sure that the path for Qt5 is corre
 11. add #include <boost/filesystem.hpp> in processPointClouds.cpp
 12. success compile and run.
 
-# 2nd time.
-got error:
+#### 2nd time.
+
+##### error:
 
 CMake Warning at /usr/local/share/pcl-1.13/PCLConfig.cmake:267 (find_package):
   By not providing "FindVTK.cmake" in CMAKE_MODULE_PATH this project has
@@ -182,6 +185,60 @@ CMake Warning at /usr/local/share/pcl-1.13/PCLConfig.cmake:267 (find_package):
     VTKConfig.cmake
     vtk-config.cmake
 
-# solution:
+##### solution:
 `sudo apt-get purge libvtk7-dev libvtk7-qt-dev`
 `sudo apt-get install libvtk7-dev libvtk7-qt-dev`
+
+#### 3rd time.
+
+##### this warning is fine if use vtk7:
+
+-- The imported target "vtkParseOGLExt" references the file
+   "/usr/bin/vtkParseOGLExt-7.1"
+but this file does not exist.  Possible reasons include:
+* The file was deleted, renamed, or moved to another location.
+* An install or uninstall procedure did not complete successfully.
+* The installation package was faulty and contained
+   "/usr/lib/cmake/vtk-7.1/VTKTargets.cmake"
+but not all the files it references.
+
+-- The imported target "vtkRenderingPythonTkWidgets" references the file
+   "/usr/lib/x86_64-linux-gnu/libvtkRenderingPythonTkWidgets.so"
+but this file does not exist.  Possible reasons include:
+* The file was deleted, renamed, or moved to another location.
+* An install or uninstall procedure did not complete successfully.
+* The installation package was faulty and contained
+   "/usr/lib/cmake/vtk-7.1/VTKTargets.cmake"
+but not all the files it references.
+
+-- The imported target "vtk" references the file
+   "/usr/bin/vtk"
+but this file does not exist.  Possible reasons include:
+* The file was deleted, renamed, or moved to another location.
+* An install or uninstall procedure did not complete successfully.
+* The installation package was faulty and contained
+   "/usr/lib/cmake/vtk-7.1/VTKTargets.cmake"
+but not all the files it references.
+
+-- The imported target "pvtk" references the file
+   "/usr/bin/pvtk"
+but this file does not exist.  Possible reasons include:
+* The file was deleted, renamed, or moved to another location.
+* An install or uninstall procedure did not complete successfully.
+* The installation package was faulty and contained
+   "/usr/lib/cmake/vtk-7.1/VTKTargets.cmake"
+but not all the files it references.
+
+##### error:
+
+/usr/bin/ld: CMakeFiles/environment.dir/src/environment.cpp.o: in function `initCamera(CameraAngle, std::shared_ptr<pcl::visualization::PCLVisualizer>&)':
+environment.cpp:(.text+0x7b8): undefined reference to `pcl::visualization::PCLVisualizer::setBackgroundColor(double const&, double const&, double const&, int)'
+/usr/bin/ld: environment.cpp:(.text+0x7cc): undefined reference to `pcl::visualization::PCLVisualizer::initCameraParameters()'
+/usr/bin/ld: environment.cpp:(.text+0x84c): undefined reference to `pcl::visualization::PCLVisualizer::setCameraPosition(double, double, double, double, double, double, int)'
+/usr/bin/ld: environment.cpp:(.text+0x897): undefined reference to `pcl::visualization::PCLVisualizer::setCameraPosition(double, double, double, double, double, double, int)'
+/usr/bin/ld: environment.cpp:(.text+0x8de): undefined reference to `pcl::visualization::PCLVisualizer::setCameraPosition(double, double, double, double, double, double, int)'
+/usr/bin/ld: environment.cpp:(.text+0x924): undefined reference to `pcl::visualization::PCLVisualizer::setCameraPosition(double, double, double, double, double, double, int)'
+/usr/bin/ld: environment.cpp:(.text+0x980): undefined reference to `pcl::visualization::PCLVisualizer::addCoordinateSystem(double, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, int)'
+
+##### solution:
+reinstall the pcl like the 1st time.
