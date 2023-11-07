@@ -43,7 +43,6 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr CreateData(std::vector<std::vector<float>> p
 
 }
 
-
 void render2DTree(Node* node, pcl::visualization::PCLVisualizer::Ptr& viewer, Box window, int& iteration, uint depth=0)
 {
 
@@ -81,9 +80,44 @@ std::vector<std::vector<int>> euclideanCluster(const std::vector<std::vector<flo
 	// TODO: Fill out this function to return list of indices for each cluster
 
 	std::vector<std::vector<int>> clusters;
- 
-	return clusters;
 
+	std::vector<bool> visited(points.size(), false);
+	// std::cout << "unvisited pts num: " << visited.size() << "  total pts: " << points.size() << "\n";
+
+	for (int i = 0; i < points.size(); i++)
+	{
+		if (!visited[i])
+		{
+			// initialize a empty cluster.
+			std::vector<int> cluster;
+			
+			// set the seed.
+			std::queue<int> expand_list;
+			expand_list.push(i);
+
+			// set teh cluster.
+			while (!expand_list.empty())
+			{
+				int front_id = expand_list.front();
+				expand_list.pop();
+				cluster.push_back(front_id);
+				visited[front_id] = true;
+
+				std::vector<int> nearbys = tree->search(points[front_id], distanceTol);
+				for (int id: nearbys){ 
+					if (!visited[id])
+					{
+						expand_list.push(id); 
+					}
+				}
+			}
+
+			clusters.push_back(cluster);
+		}
+		
+	}
+
+	return clusters;
 }
 
 int main ()
@@ -100,7 +134,17 @@ int main ()
 	pcl::visualization::PCLVisualizer::Ptr viewer = initScene(window, 25);
 
 	// Create data
-	std::vector<std::vector<float>> points = { {-6.2,7}, {-6.3,8.4}, {-5.2,7.1}, {-5.7,6.3}, {7.2,6.1}, {8.0,5.3}, {7.2,7.1}, {0.2,-7.1}, {1.7,-6.9}, {-1.2,-7.2}, {2.2,-8.9} };
+	std::vector<std::vector<float>> points = { {-6.2, 7}, {-6.3,8.4}, {-5.2,7.1}, {-5.7,6.3}, {7.2,6.1}, {8.0,5.3}, {7.2,7.1}, {0.2,-7.1}, {1.7,-6.9}, {-1.2,-7.2}, {2.2,-8.9} };
+	
+	//  				0(-6.2,  7)
+	//  1(-6.3, 8.4)						2(-5.2,  7.1)
+	//						3(-5.7,  6.3)					6{7.2,7.1}
+	//									4{7.2, 6.1}
+	//							5{8.0, 5.3}
+	//					7{0.2, -7.1}
+	//		9{-1.2,-7.2}			8{1.7, -6.9}
+	//				10{2.2,-8.9}
+	
 	//std::vector<std::vector<float>> points = { {-6.2,7}, {-6.3,8.4}, {-5.2,7.1}, {-5.7,6.3} };
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = CreateData(points);
 
@@ -113,7 +157,7 @@ int main ()
   	render2DTree(tree->root,viewer,window, it);
   
   	std::cout << "Test Search" << std::endl;
-  	std::vector<int> nearby = tree->search({-6,7},3.0);
+  	std::vector<int> nearby = tree->search({-6, 7},3.0);
   	for(int index : nearby)
       std::cout << index << ",";
   	std::cout << std::endl;
