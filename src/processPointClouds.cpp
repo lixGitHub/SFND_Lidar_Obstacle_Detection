@@ -36,8 +36,8 @@ typename pcl::PointCloud<PointT>::Ptr ProcessPointClouds<PointT>::FilterCloud(ty
     sor.setLeafSize (filterRes, filterRes, filterRes);
     sor.filter (*cloud_downsample);
 
-    std::cout << "filtered points num: " << cloud_downsample->size() << std::endl;
-    numPoints(cloud_downsample);
+    // std::cout << "filtered points num: " << cloud_downsample->size() << std::endl;
+    // numPoints(cloud_downsample);
 
     // crop the ROI.
     typename pcl::PointCloud<PointT>::Ptr cloud_crop(new pcl::PointCloud<PointT>());
@@ -47,8 +47,8 @@ typename pcl::PointCloud<PointT>::Ptr ProcessPointClouds<PointT>::FilterCloud(ty
     crop.setInputCloud(cloud_downsample);
     crop.filter(*cloud_crop);
 
-     std::cout << "crop points num: " << cloud_crop->size() << std::endl;
-    numPoints(cloud_crop);
+    // std::cout << "crop points num: " << cloud_crop->size() << std::endl;
+    // numPoints(cloud_crop);
 
     // remove the ego car
     typename pcl::PointCloud<PointT>::Ptr cloud_remove_ego(new pcl::PointCloud<PointT>());
@@ -94,12 +94,13 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
 
     // Create the filtering object
     pcl::ExtractIndices<PointT> extract;
+
     // Extract the inliers
     extract.setInputCloud (cloud);
     extract.setIndices (inliers);
     extract.setNegative (false);
     extract.filter (*cloud_p);
-    std::cerr << "PointCloud representing the planar component: " << cloud_p->width * cloud_p->height << " data points." << std::endl;
+    // std::cerr << "PointCloud representing the planar component: " << cloud_p->width * cloud_p->height << " data points." << std::endl;
 
     // Create the filtering object
     extract.setNegative (true);
@@ -150,6 +151,98 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
 }
 
 
+// Ransac3D based ground segmentation
+template<typename PointT>
+std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::SegmentPlaneRansac3D(typename pcl::PointCloud<PointT>::Ptr cloud, int maxIterations, float distanceThreshold)
+{
+    // Time segmentation process
+    auto startTime = std::chrono::steady_clock::now();
+
+	srand(time(NULL));
+	
+	// TODO: Fill in this function
+
+	int idx1, idx2, idx3;
+	int start = 0, end = cloud->points.size()-1;
+	int max_inlier_count = 0;
+    float x1, y1, z1, x2, y2, z2, x3, y3, z3, a, b, c, d, w;
+	float best_a, best_b, best_c, best_w, best_d;
+	float temp_dist = 0;
+
+	// For max iterations 
+	for (int i = 0; i < maxIterations; i++)
+	{
+		// Randomly sample subset to construct a plane
+		// chose index.
+		idx1 = start + rand() % (end - start + 1);
+    	idx2 = start + rand() % (end - start + 1);
+		idx3 = start + rand() % (end - start + 1);
+		// Ensure the two indices are unique
+		while (idx1 == idx2 || idx1 == idx3 || idx2 == idx3) {
+			idx2 = start + rand() % (end - start + 1);
+			idx3 = start + rand() % (end - start + 1);
+		}
+
+		x1 = cloud->points[idx1].x;
+		y1 = cloud->points[idx1].y;
+		z1 = cloud->points[idx1].z;
+		x2 = cloud->points[idx2].x;
+		y2 = cloud->points[idx2].y;
+		z2 = cloud->points[idx2].z;
+		x3 = cloud->points[idx3].x;
+		y3 = cloud->points[idx3].y;
+		z3 = cloud->points[idx3].z;
+
+		a = (y2-y1)*(z3-z1) - (z2-z1)*(y3-y1);
+		b = (z2-z1)*(x3-x1) - (x2-x1)*(z3-z1);
+		c = (x2-x1)*(y3-y1) - (y2-y1)*(x3-x1);
+		w = sqrt(a*a + b*b + c*c);
+		d = -(a * x1 + b * y1 + c * z1);
+
+		// Measure distance between every point and fitted plane
+		// If distance is smaller than threshold count it as inlier
+		int inlier_count = 0;
+		for (int j = 0; j < cloud->points.size(); j++)
+		{
+			temp_dist = abs(a*cloud->points[j].x + b*cloud->points[j].y + c*cloud->points[j].z + d) / w ;
+			if (temp_dist < distanceThreshold)
+			{
+				inlier_count++;
+			}
+		}
+		if (inlier_count > max_inlier_count){
+			max_inlier_count = inlier_count;
+			best_a = a;
+			best_b = b;
+			best_c = c;
+			best_d = d;
+			best_w = w;
+		}
+		// std::cout << "iteration: " << i << "  inlier count: " << inlier_count << std::endl;
+	}
+
+    typename pcl::PointCloud<PointT>::Ptr cloud_g(new pcl::PointCloud<PointT>());
+    typename pcl::PointCloud<PointT>::Ptr cloud_ng(new pcl::PointCloud<PointT>());
+
+	for(int i = 0; i < cloud->points.size(); i++)
+	{
+        PointT point = cloud->points[i];
+        temp_dist = abs(best_a*point.x + best_b*point.y + best_c*point.z + best_d) / best_w ;
+		if (temp_dist < distanceThreshold) { cloud_g->points.push_back(point); }
+        else { cloud_ng->points.push_back(point); }
+	}
+    std::cout <<  " ground pts count: " << cloud_g->points.size() << std::endl;
+
+    auto endTime = std::chrono::steady_clock::now();
+    auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+    std::cout << "plane segmentation took " << elapsedTime.count() << " milliseconds" << std::endl;
+
+	// Return ground and nonground points.
+    std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr> segResult(cloud_ng, cloud_g);
+    return segResult;
+}
+
+
 template<typename PointT>
 std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::Clustering(typename pcl::PointCloud<PointT>::Ptr cloud, float clusterTolerance, int minSize, int maxSize)
 {
@@ -187,7 +280,8 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
       cloud_cluster->height = 1;
       cloud_cluster->is_dense = true; // ?
   
-      std::cout << "PointCloud representing the Cluster: " << cloud_cluster->size () << " data points." << std::endl;
+    //   std::cout << "PointCloud representing the Cluster: " << cloud_cluster->size () << " data points." << std::endl;
+
       j++;
       clusters.push_back(cloud_cluster);
     }
