@@ -18,6 +18,7 @@ list(REMOVE_ITEM PCL_LIBRARIES "vtkproj4")
 add_executable (quizCluster cluster.cpp ../../render/render.cpp)
 target_link_libraries (quizCluster ${PCL_LIBRARIES})
 
-
+add_executable(kd3d cluster3d.cpp ../../render/render.cpp)
+target_link_libraries(kd3d ${PCL_LIBRARIES})
 
 

@@ -112,31 +112,31 @@ void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer)
     // renderPointCloud(viewer,inputCloud,"inputCloud");
 
     // downsample and crop points in ROI.
-    pcl::PointCloud<pcl::PointXYZI>::Ptr filterCloud = pointProcessorI->FilterCloud(inputCloud, 0.2 , Eigen::Vector4f (-10, -10, -2, 1), Eigen::Vector4f ( 50, 10, 20, 1));
+    pcl::PointCloud<pcl::PointXYZI>::Ptr filterCloud = pointProcessorI->FilterCloud(inputCloud, 0.2 , Eigen::Vector4f (-10, -7, -2, 1), Eigen::Vector4f ( 50, 7, 10, 1));
     // renderPointCloud(viewer,filterCloud,"filterCloud");
   
     // seperate ground.
     int maxIterations = 100;
     float distanceThreshold = 0.2;
     // std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> segmentCloud = pointProcessorI->SegmentPlane(filterCloud, maxIterations, distanceThreshold);
-    std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> segmentCloud = pointProcessorI->SegmentPlaneRansac3D(filterCloud, maxIterations, distanceThreshold);
+    std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> segmentCloud = pointProcessorI->MySegmentPlaneRansac3D(filterCloud, maxIterations, distanceThreshold);
 
     renderPointCloud(viewer,segmentCloud.first,"obstCloud",Color(1,1,1));
     renderPointCloud(viewer,segmentCloud.second,"planeCloud",Color(0,1,0));
 
     // cluster non-ground pts.
-    std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloudClusters = pointProcessorI->Clustering(segmentCloud.first, 0.5, 3, 3000);
+    std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloudClusters = pointProcessorI->MyClustering(segmentCloud.first, 0.5, 3, 3000);
     int clusterId = 0;
-    std::vector<Color> colors = {Color(1,0,0), Color(0,1,0), Color(0,0,1)};
+    std::vector<Color> colors = {Color(0,1,0), Color(0,0,1)};
 
     for(pcl::PointCloud<pcl::PointXYZI>::Ptr cluster : cloudClusters)
     {
-        // print clusters information.
-        std::cout << "cluster size ";
-        pointProcessorI->numPoints(cluster);
+        // // print clusters information.
+        // std::cout << "cluster size ";
+        // pointProcessorI->numPoints(cluster);
 
         // // render clusters.
-        // renderPointCloud(viewer,cluster,"obstCloud"+std::to_string(clusterId),colors[clusterId]);
+        // renderPointCloud(viewer,cluster,"obstCloud"+std::to_string(clusterId),colors[clusterId%3]);
 
         // render bbox.
         Box box = pointProcessorI->BoundingBox(cluster);
@@ -163,8 +163,8 @@ void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer, std::shared_ptr<P
     // seperate ground.
     int maxIterations = 100;
     float distanceThreshold = 0.2;
-    // std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> segmentCloud = pointProcessorI->SegmentPlane(filterCloud, maxIterations, distanceThreshold);
-    std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> segmentCloud = pointProcessorI->SegmentPlaneRansac3D(filterCloud, maxIterations, distanceThreshold);
+    std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> segmentCloud = pointProcessorI->SegmentPlane(filterCloud, maxIterations, distanceThreshold);
+    // std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> segmentCloud = pointProcessorI->MySegmentPlaneRansac3D(filterCloud, maxIterations, distanceThreshold);
     
     renderPointCloud(viewer,segmentCloud.first,"obstCloud",Color(1,1,1));
     renderPointCloud(viewer,segmentCloud.second,"planeCloud",Color(0,1,0));
@@ -251,7 +251,6 @@ int main (int argc, char** argv)
     //     cityBlock(viewer, pointProcessorI, inputCloudI);
             
     //     streamIterator++;
-
     //     viewer->spinOnce(); 
     // }
     // while (!viewer->wasStopped ()){ viewer->spinOnce ();} 
@@ -268,9 +267,10 @@ int main (int argc, char** argv)
         cityBlock(viewer, pointProcessorI, inputCloudI);
             
         streamIterator++;
-        if(streamIterator == stream.end())
-            streamIterator = stream.begin();
+        if(streamIterator == stream.end()) { streamIterator = stream.begin(); }
 
         viewer->spinOnce ();
+        // std::cin.get();
     }
+
 }

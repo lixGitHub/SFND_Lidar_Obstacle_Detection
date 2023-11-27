@@ -1,7 +1,7 @@
 // PCL lib Functions for processing point clouds 
 
 #include "processPointClouds.h"
-
+#include <iomanip>
 
 //constructor:
 template<typename PointT>
@@ -153,7 +153,7 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
 
 // Ransac3D based ground segmentation
 template<typename PointT>
-std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::SegmentPlaneRansac3D(typename pcl::PointCloud<PointT>::Ptr cloud, int maxIterations, float distanceThreshold)
+std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::MySegmentPlaneRansac3D(typename pcl::PointCloud<PointT>::Ptr cloud, int maxIterations, float distanceThreshold)
 {
     // Time segmentation process
     auto startTime = std::chrono::steady_clock::now();
@@ -231,7 +231,7 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
 		if (temp_dist < distanceThreshold) { cloud_g->points.push_back(point); }
         else { cloud_ng->points.push_back(point); }
 	}
-    std::cout <<  " ground pts count: " << cloud_g->points.size() << std::endl;
+    // std::cout <<  " ground pts count: " << cloud_g->points.size() << "  non-ground pts count: " << cloud_ng->points.size() << std::endl;
 
     auto endTime = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
@@ -295,6 +295,102 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
 
 
 template<typename PointT>
+std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::MyClustering(typename pcl::PointCloud<PointT>::Ptr cloud, float clusterTolerance, int minSize, int maxSize)
+{
+
+    // Time clustering process
+    auto startTime = std::chrono::steady_clock::now();
+
+    std::vector<typename pcl::PointCloud<PointT>::Ptr> clusters;
+
+    // Creating the KdTree object for the search method of the extraction
+    std::shared_ptr<KdTree3D> kdtree(new KdTree3D);
+    for (int i = 0; i < cloud->points.size(); i++)
+    {
+        std::vector<float> test{cloud->points[i].x, cloud->points[i].y, cloud->points[i].z};
+        kdtree->InsertPoint(test, i);
+    }
+
+    // Use kdtree to do euclidean cluster. save the point index of each cluster.
+	std::vector<std::vector<int>> clusters_ids;
+
+	std::vector<bool> visited(cloud->points.size(), false);
+	// std::cout << "unvisited pts num: " << visited.size() << "  total pts: " << points.size() << "\n";
+	for (int i = 0; i < cloud->points.size(); i++)
+	{
+		if (!visited[i])
+		{
+			// initialize a empty cluster.
+			std::vector<int> cluster;
+			// set the seed.
+			std::queue<int> expand_list;
+            visited[i] = true;
+			expand_list.push(i);
+			// find all points of the cluster.
+			while (!expand_list.empty())
+			{
+				int front_id = expand_list.front();
+				expand_list.pop();
+				cluster.push_back(front_id);
+
+				std::vector<int> nearbys = kdtree->SearchNeighbour(std::vector<float>{cloud->points[front_id].x, cloud->points[front_id].y, cloud->points[front_id].z}, clusterTolerance);
+                
+				for (int id: nearbys){ 
+					if (!visited[id])
+					{
+                        visited[id] = true;
+						expand_list.push(id); 
+					}
+				}
+
+                // std::cout << "find and add neighbours of " << front_id << "\n";
+                // for (auto print_id: nearbys)
+                // {
+                //     if (!visited[print_id]) { std::cout << std::setw(5) << print_id; }
+                // }
+                // std::cout << "\n";
+
+                // std::cout << "current expand list: " << "(size:  " << expand_list.size() << ")\n";
+                // printQueue(expand_list);
+
+                // // std::cout << "expand_list size: " << expand_list.size() << "\n";
+                // std::cin.get();
+			}
+            clusters_ids.push_back(cluster);
+
+            // std::cout << "all cluster pts indices: \n";
+            // for(int k : cluster){
+            //     std::cout << std::setw(5) << k;
+            // }
+            // std::cout << "\n";
+		}
+	}
+
+    // save the points of each cluster.
+    int j = 0;
+    for (const auto& cluster : clusters_ids)
+    {
+      typename pcl::PointCloud<PointT>::Ptr one_cluster (new pcl::PointCloud<PointT>());
+      for (const auto& idx : cluster) {
+        one_cluster->push_back((*cloud)[idx]);
+      } //*
+      one_cluster->width = one_cluster->size ();
+      one_cluster->height = 1;
+      one_cluster->is_dense = true; // ?
+
+      clusters.push_back(one_cluster);
+    }
+
+    auto endTime = std::chrono::steady_clock::now();
+    auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+    std::cout << "clustering took " << elapsedTime.count() << " milliseconds and found " << clusters.size() << " clusters" << std::endl;
+
+    return clusters;
+}
+
+
+
+template<typename PointT>
 Box ProcessPointClouds<PointT>::BoundingBox(typename pcl::PointCloud<PointT>::Ptr cluster)
 {
 
@@ -349,4 +445,16 @@ std::vector<boost::filesystem::path> ProcessPointClouds<PointT>::streamPcd(std::
 
     return paths;
 
+}
+
+
+template<typename PointT>
+void ProcessPointClouds<PointT>::printQueue(const std::queue<int>& q) {
+    std::queue<int> tempQueue = q; // Copy the original queue
+
+    while (!tempQueue.empty()) {
+        std::cout << std::setw(5) << tempQueue.front();
+        tempQueue.pop();
+    }
+    std::cout << std::endl;
 }
