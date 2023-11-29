@@ -32,13 +32,6 @@ public:
 
     void numPoints(typename pcl::PointCloud<PointT>::Ptr cloud);
 
-    template<typename pointT>
-    pointT test(pointT a, pointT b){
-        double dif = a.x - b.x;
-        // pointT(a.x+b.x, a.y+b.y);
-        return a;
-    }
-
     typename pcl::PointCloud<PointT>::Ptr FilterCloud(typename pcl::PointCloud<PointT>::Ptr cloud, float filterRes, Eigen::Vector4f minPoint, Eigen::Vector4f maxPoint);
 
     std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr> SeparateClouds(pcl::PointIndices::Ptr inliers, typename pcl::PointCloud<PointT>::Ptr cloud);
@@ -59,6 +52,5 @@ public:
 
     std::vector<boost::filesystem::path> streamPcd(std::string dataPath);
   
-    void printQueue(const std::queue<int>& q);
 };
 #endif /* PROCESSPOINTCLOUDS_H_ */

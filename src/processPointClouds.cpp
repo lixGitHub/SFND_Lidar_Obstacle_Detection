@@ -36,9 +36,6 @@ typename pcl::PointCloud<PointT>::Ptr ProcessPointClouds<PointT>::FilterCloud(ty
     sor.setLeafSize (filterRes, filterRes, filterRes);
     sor.filter (*cloud_downsample);
 
-    // std::cout << "filtered points num: " << cloud_downsample->size() << std::endl;
-    // numPoints(cloud_downsample);
-
     // crop the ROI.
     typename pcl::PointCloud<PointT>::Ptr cloud_crop(new pcl::PointCloud<PointT>());
     pcl::CropBox<PointT> crop(true);
@@ -47,14 +44,12 @@ typename pcl::PointCloud<PointT>::Ptr ProcessPointClouds<PointT>::FilterCloud(ty
     crop.setInputCloud(cloud_downsample);
     crop.filter(*cloud_crop);
 
-    // std::cout << "crop points num: " << cloud_crop->size() << std::endl;
-    // numPoints(cloud_crop);
 
     // remove the ego car
     typename pcl::PointCloud<PointT>::Ptr cloud_remove_ego(new pcl::PointCloud<PointT>());
     crop.setInputCloud(cloud_crop);
-    crop.setMin(Eigen::Vector4f(-2,-2,-2, 1));
-    crop.setMax(Eigen::Vector4f( 3, 3, 2, 1));
+    crop.setMin(Eigen::Vector4f(-1.5,-1.7,-1, 1));
+    crop.setMax(Eigen::Vector4f( 2.6, 1.7, -0.4, 1));
     crop.filter(*cloud_remove_ego);
 
     // [option 2] 
@@ -73,13 +68,10 @@ typename pcl::PointCloud<PointT>::Ptr ProcessPointClouds<PointT>::FilterCloud(ty
     // typename pcl::PointCloud<PointT>::Ptr cloud_outer(new pcl::PointCloud<PointT>());
     extract.filter (*cloud_remove_ego);
 
-
     auto endTime = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
     std::cout << "filtering took " << elapsedTime.count() << " milliseconds" << std::endl;
 
-    // return cloud_crop;
-    // return cloud_outer;
     return cloud_remove_ego;
 }
 
@@ -315,7 +307,6 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::M
 	std::vector<std::vector<int>> clusters_ids;
 
 	std::vector<bool> visited(cloud->points.size(), false);
-	// std::cout << "unvisited pts num: " << visited.size() << "  total pts: " << points.size() << "\n";
 	for (int i = 0; i < cloud->points.size(); i++)
 	{
 		if (!visited[i])
@@ -342,43 +333,25 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::M
 						expand_list.push(id); 
 					}
 				}
-
-                // std::cout << "find and add neighbours of " << front_id << "\n";
-                // for (auto print_id: nearbys)
-                // {
-                //     if (!visited[print_id]) { std::cout << std::setw(5) << print_id; }
-                // }
-                // std::cout << "\n";
-
-                // std::cout << "current expand list: " << "(size:  " << expand_list.size() << ")\n";
-                // printQueue(expand_list);
-
-                // // std::cout << "expand_list size: " << expand_list.size() << "\n";
-                // std::cin.get();
 			}
             clusters_ids.push_back(cluster);
-
-            // std::cout << "all cluster pts indices: \n";
-            // for(int k : cluster){
-            //     std::cout << std::setw(5) << k;
-            // }
-            // std::cout << "\n";
 		}
 	}
 
     // save the points of each cluster.
-    int j = 0;
     for (const auto& cluster : clusters_ids)
     {
-      typename pcl::PointCloud<PointT>::Ptr one_cluster (new pcl::PointCloud<PointT>());
-      for (const auto& idx : cluster) {
-        one_cluster->push_back((*cloud)[idx]);
-      } //*
-      one_cluster->width = one_cluster->size ();
-      one_cluster->height = 1;
-      one_cluster->is_dense = true; // ?
+        if (cluster.size() < minSize) { continue; }
 
-      clusters.push_back(one_cluster);
+        typename pcl::PointCloud<PointT>::Ptr one_cluster (new pcl::PointCloud<PointT>());
+        for (const auto& idx : cluster) {
+            one_cluster->push_back((*cloud)[idx]);
+        }
+        one_cluster->width = one_cluster->size ();
+        one_cluster->height = 1;
+        one_cluster->is_dense = true; // ?
+
+        clusters.push_back(one_cluster);
     }
 
     auto endTime = std::chrono::steady_clock::now();
@@ -445,16 +418,4 @@ std::vector<boost::filesystem::path> ProcessPointClouds<PointT>::streamPcd(std::
 
     return paths;
 
-}
-
-
-template<typename PointT>
-void ProcessPointClouds<PointT>::printQueue(const std::queue<int>& q) {
-    std::queue<int> tempQueue = q; // Copy the original queue
-
-    while (!tempQueue.empty()) {
-        std::cout << std::setw(5) << tempQueue.front();
-        tempQueue.pop();
-    }
-    std::cout << std::endl;
 }

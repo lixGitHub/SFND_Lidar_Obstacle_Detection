@@ -1,4 +1,4 @@
-/* \author Xiao Li */
+/* author Xiao Li */
 // 3D kd tree
 
 #ifndef MYKDTREE
@@ -13,8 +13,6 @@
 
 class NodePoint
 {
-private:
-	/* data */
 public:
 	int id;
 	std::vector<float> point;
@@ -77,24 +75,12 @@ public:
 		}
 	}
 
-	std::vector<int> SearchHelper(std::vector<float> target, float distanceTol, int depth, std::shared_ptr<NodePoint>& node_ptr, bool debug){
-		if (debug){ std::cout << "====depth: " << depth << "\n"; }
-	
+	std::vector<int> SearchHelper(std::vector<float> target, float distanceTol, int depth, std::shared_ptr<NodePoint>& node_ptr){
+		
 		std::vector<int> near_ids;
-
 		if (nullptr == node_ptr)
 		{
-			if (debug){ std::cout << "node is null, return\n"; }
 			return near_ids;
-		}
-
-		if (debug){  
-		std::cout << "check node " << node_ptr->id << " coordinates: (";
-			for (auto c: node_ptr->point)
-			{
-				std::cout << c << ", ";
-			}
-			std::cout << ")\n";
 		}
 			
 		// check if the current node is a candidate.
@@ -109,116 +95,41 @@ public:
 		}
 		if (is_candidate)
 		{
-			if (debug){  std::cout << node_ptr->id << " is a candidate\n"; }
-			float dis_square, temp_dis;
+			float dist_square, temp_dist;
 			for (int i = 0; i < target.size(); i++){
-				temp_dis = node_ptr->point[i] - target[i];
-				dis_square += temp_dis * temp_dis;
+				temp_dist = node_ptr->point[i] - target[i];
+				dist_square += temp_dist * temp_dist;
 			}
 			
-			if (dis_square < distanceTol*distanceTol)
+			if (dist_square < distanceTol*distanceTol)
 			{
 				near_ids.push_back(node_ptr->id);
-				if (debug){  std::cout << "find nearby: " << node_ptr->id << ",  dist: " << (dis_square) << "\n"; }
-			}else{
-				if (debug){  std::cout << node_ptr->id << " not near by, dist = " << dis_square << "\n"; }
 			}
-		}
-		else {
-			if (debug){  std::cout << node_ptr->id << " is not candidate.\n"; }
 		}
 
 		int dim = target.size(); // get points dimesion.
 		int comp_dim = depth % dim; // calculate which dim is used to compare.
-		if (debug){  std::cout << "check sub region, comp_dim = " << comp_dim <<  "\n"; }
 
-		if (debug){  
-			std::cout << "node_p coordinates: (";
-			for (auto c: node_ptr->point)
-			{
-				std::cout << c << ", ";
-			}
-			std::cout << ")\n";
-			std::cout << "target coordinates: (";
-			for (auto c: target)
-			{
-				std::cout << c << ", ";
-			}
-			std::cout << ")\n";
-			
-			std::cout << "test: " <<node_ptr->point[comp_dim] << ", " <<  target[comp_dim] << ", " << distanceTol << std::endl;
-		}
-
-		// if (node_ptr->point[comp_dim] > target[comp_dim]+distanceTol)
 		if (node_ptr->point[comp_dim] > target[comp_dim]-distanceTol)
-		{ // only in the left region
-			if (debug){  
-				int left_id = node_ptr->left == nullptr ? -1 : node_ptr->left->id ;
-				std::cout << "search left sid of " << node_ptr->id << " left id: " << left_id << "\n";
-			}
-
-			std::vector<int> left_nearby = SearchHelper(target, distanceTol, depth+1, node_ptr->left, debug);
+		{ // check the left region
+			std::vector<int> left_nearby = SearchHelper(target, distanceTol, depth+1, node_ptr->left);
 			for (auto c_i: left_nearby) { near_ids.push_back(c_i); }
 		}
 
-		// else if (node_ptr->point[comp_dim] < target[comp_dim]- distanceTol)
 		if (node_ptr->point[comp_dim] < target[comp_dim]+distanceTol)
-		{ // only in the right region.
-			if (debug){  
-				int right_id = node_ptr->right == nullptr ? -1 : node_ptr->right->id ;
-				std::cout << "search right sid of " << node_ptr->id << " right id: " << right_id <<"\n";
-			}
-
-			std::vector<int> right_candidate = SearchHelper(target, distanceTol, depth+1, node_ptr->right, debug);
+		{ // check the right region.
+			std::vector<int> right_candidate = SearchHelper(target, distanceTol, depth+1, node_ptr->right);
 			for (auto c_i: right_candidate) { near_ids.push_back(c_i); }
-		}
-
-		if (debug){  
-			std::cout << "return: ";
-			for (auto e: near_ids){
-				std::cout << e << ", ";
-			}
-			std::cout << "\n";
 		}
 			
 		return near_ids;
 	}
 	
 	std::vector<int> SearchNeighbour(std::vector<float> target, float distanceTol){
-		std::vector<int> ids = SearchHelper(target, distanceTol, 0, root, false);
+		std::vector<int> ids = SearchHelper(target, distanceTol, 0, root);
 		return ids;
 	}
 
-	void PrintTree(){
-		std::queue<std::shared_ptr<NodePoint>> node_list;
-		node_list.push(root);
-
-		while (!node_list.empty())
-		{
-			int count = node_list.size();
-			int i =0;
-			while (i<count)
-			{
-				std::shared_ptr<NodePoint> node_ptr = node_list.front();
-
-					// std::string node_id = node_ptr==nullptr ? "nan" : std::to_string(node_ptr->id); 
-					// std::cout << node_id << "	";
-
-				if (node_ptr == nullptr)
-				{
-					std::cout << "nan	";
-				}
-				else{
-					std::cout << node_ptr->id << "	";
-					node_list.push(node_ptr->left);
-					node_list.push(node_ptr->right);
-				}
-				node_list.pop();
-				i++;
-			}
-			std::cout << "\n";
-		}
-	}
 };
 
 
